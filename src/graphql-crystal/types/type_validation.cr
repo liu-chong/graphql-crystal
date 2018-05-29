@@ -20,9 +20,10 @@ module GraphQL
 
       case type_definition
       when Language::EnumTypeDefinition
-        if value.is_a?(Language::AEnum)
+        if value.is_a?(Language::AEnum) || value.is_a?(String)
           @enum_values_cache[type_definition.name] ||= type_definition.fvalues.map(&.as(Language::EnumValueDefinition).name)
-          @enum_values_cache[type_definition.name].not_nil!.includes? value.name
+          value_name = value.is_a?(Language::AEnum) ? value.name : value
+          @enum_values_cache[type_definition.name].not_nil!.includes? value_name
         else
           false
         end
@@ -54,19 +55,16 @@ module GraphQL
           false
         end
       when Language::InputObjectTypeDefinition
-        return false unless value.is_a? Hash
-        (type_definition.fields.map(&.name) + value.keys).uniq.each do |key|
+        _value = value.is_a?(Language::InputObject) ? value.to_h : value
+        return false unless _value.is_a? Hash
+        (type_definition.fields.map(&.name) + _value.keys).uniq.each do |key|
           return false unless field = type_definition.fields.find(&.name.==(key))
-          if value.has_key?(field.name)
-            vv = value[field.name]
-            {% if JSON::NEW_JSON_ANY_TYPE %}
-            vv = vv.is_a?(JSON::Any) ? vv.as(JSON::Any).raw : vv
-            {% end %}
-            return false unless accepts?(field.type, vv)
+          if _value.has_key?(field.name)
+            return false unless accepts?(field.type, _value[field.name])
           elsif field.default_value
             return false unless accepts?(field.type, field.default_value)
           else
-            return false
+            return accepts?(field.type, nil)
           end
         end
         return true
