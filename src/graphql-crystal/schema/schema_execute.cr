@@ -9,7 +9,11 @@ module GraphQL
         description: "the name of this GraphQL type"
       )
 
+      {% if JSON::NEW_JSON_ANY_TYPE %}
+      alias ExecuteParams = Hash(String, JSON::Any::Type) | Hash(String, String | Hash(String, JSON::Any::Type | Nil))
+      {% else %}
       alias ExecuteParams = Hash(String, JSON::Type) | Hash(String, String | Hash(String, JSON::Type | Nil))
+      {% end %}
 
       #
       # execute a query against the schema
@@ -43,17 +47,6 @@ module GraphQL
       # `context`: *optional* a custom context to be injected in
       #            field callbacks.
       def execute(document : Language::Document, params, operation_name = nil, context = Context.new(self, max_depth))
-        execute(document, cast_to_jsontype(params), operation_name, context)
-      end
-
-      #
-      # execute a query against the schema
-      # `document`: a parsed query
-      # `params`: *optional* the query variables as a Hash
-      # `operation_name`: *optional* the query or mutation name to be executed
-      # `context`: *optional* a custom context to be injected in
-      #            field callbacks.
-      def execute(document : Language::Document, params : Hash(String, JSON::Type)?, operation_name : String?, context = Context.new(self, max_depth))
         queries, mutations, fragments = extract_request_parts(document)
         context.fragments = fragments
         operations = (queries + mutations)
@@ -66,7 +59,7 @@ module GraphQL
         return {"errors" => [{"message" => "Must provide a valid operation name if query contains multiple operations.", "path" => [] of String}]} unless query
 
         begin
-          substitute_variables_from_params(query, params ? params : {} of String => JSON::Type)
+          substitute_variables_from_params(query, params ? params : {} of String => JSON::Any)
         rescue e : Exception
           # we hit an error while resolving fragments
           # no path info atm
@@ -350,7 +343,7 @@ module GraphQL
         raise "I should have never come here"
       end
 
-      private def substitute_variables_from_params(query, params : Hash(String, JSON::Type))
+      private def substitute_variables_from_params(query, params)
         if (superfluous = params.keys - query.variables.map(&.name)).any?
           raise "unknown variables #{superfluous.join(", ")}"
         end
@@ -379,6 +372,7 @@ module GraphQL
         if errors.any?
           raise errors.map(&.[:message]).join(", ")
         end
+
         # substitute
         query.map_children do |node|
           case node
@@ -479,6 +473,25 @@ module GraphQL
       end
 
       private def cast_to_jsontype(v)
+        {% if JSON::NEW_JSON_ANY_TYPE %}
+        case v
+        when Int32
+          v.to_i64.as(JSON::Any::Type)
+        when Float32
+          v.to_f64.as(JSON::Any::Type)
+        when Array
+          v.map { |vv| cast_to_jsontype(vv).as(JSON::Any::Type) }
+        when Hash
+          v.keys.reduce(Hash(String, JSON::Any).new) do |hash, key|
+            hash[key] = JSON::Any.new(cast_to_jsontype v[key])
+            hash
+          end
+        when JSON::Any
+          v.as_h?
+        else
+          v
+        end.as(JSON::Any::Type)
+        {% else %}
         case v
         when Int32
           v.to_i64.as(JSON::Type)
@@ -494,13 +507,18 @@ module GraphQL
         else
           v
         end.as(JSON::Type)
+        {% end %}
       end
 
       private def cast_to_return(value)
         case value
         when Hash
           value.reduce(Hash(String, ReturnType).new) do |memo, h|
+            {% if JSON::NEW_JSON_ANY_TYPE %}
             memo[h[0]] = cast_to_return(h[1]).as(ReturnType)
+            {% else %}
+            memo[h[0]] = cast_to_return(h[1]).as(ReturnType)
+            {% end %}
             memo
           end
         when Array
