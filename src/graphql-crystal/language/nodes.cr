@@ -94,7 +94,7 @@ module GraphQL
     define_array_cast(FValue)
 
     alias Type = TypeName | NonNullType | ListType
-    alias Selection = Field | FragmentSpread | InlineFragment
+    alias Selection = Field | FragmentSpread | InlineFragment | AbstractNode
 
     class VariableDefinition < AbstractNode
       values({name: String, type: Type, default_value: FValue})
