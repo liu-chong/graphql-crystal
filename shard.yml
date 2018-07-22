@@ -7,7 +7,7 @@ authors:
 dependencies:
   cltk:
     github: ziprandom/cltk
-    branch: master
+    commit: b641ba05d9e297e862fca20aa3647fc38a2d15cc
 
 crystal: 0.24.1
 
