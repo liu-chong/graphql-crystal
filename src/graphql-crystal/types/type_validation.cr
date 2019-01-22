@@ -39,8 +39,6 @@ module GraphQL
         end
       when Language::ScalarTypeDefinition
         case type_definition.name
-        when "Time"
-          value.is_a?(Time)
         when "ID"
           value.is_a?(Int) || value.is_a?(String)
         when "Int"

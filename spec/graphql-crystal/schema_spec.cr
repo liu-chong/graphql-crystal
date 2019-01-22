@@ -49,12 +49,12 @@ describe GraphQL::Schema do
       expected = {
         "data" => {
           "user" => {
-            "id" => 0, "name" => "otto neverthere", "created_at" => Time.now.to_s
+            "id" => 0, "name" => "otto neverthere",
           },
         },
       }
       TestSchema::Schema.execute(
-        "{ user(id: 0) { id, name, created_at } }"
+        "{ user(id: 0) { id, name } }"
       ).should eq(expected)
     end
 
@@ -196,6 +196,22 @@ describe GraphQL::Schema do
             "London"
           ]
         }
+      ).should eq({
+        "data" => {
+          "addresses" => [
+            {"city" => "London"}
+          ],
+        }
+      })
+    end
+
+    it "answers a request with non-nullable arg and arg provided with JSON::Any type" do
+      TestSchema::Schema.execute(
+        "query getAddresses($city: [City]!) { addresses(city: $city) { city } }", JSON.parse({
+          "city" => [
+            "London"
+          ]
+        }.to_json)
       ).should eq({
         "data" => {
           "addresses" => [

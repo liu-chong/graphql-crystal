@@ -28,10 +28,6 @@ describe GraphQL::Directive do
                   "isDeprecated"      => false,
                   "deprecationReason" => nil,
                 }, {
-                  "name"              => "created_at",
-                  "isDeprecated"      => false,
-                  "deprecationReason" => nil,
-                }, {
                 "name"              => "friends",
                 "isDeprecated"      => false,
                 "deprecationReason" => nil,
