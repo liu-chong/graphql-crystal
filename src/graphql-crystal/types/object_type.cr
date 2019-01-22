@@ -27,14 +27,14 @@ macro on_included
     on_all_child_classes do
 
       macro field(name, &block)
-        field(\\{{name}}, "", "args", "") \\{% if block.is_a?(Block)%} \\{{block}}\\{%end%}
+        field(\\{{name}}, "", args, "") \\{% if block.is_a?(Block)%} \\{{block}}\\{%end%}
       end
 
       macro field(name, description, args, typename, &block)
         \\{% GRAPHQL_FIELDS << {name, description, args, typename} %}
-        private def \\{{name.id}}_field(\\{{(block.is_a?(Block) && block.args.size > 0) ? block.args.first.id : args.id}}, \\{{((block.is_a?(Block) && block.args.size > 1) ? block.args[1].id : "context").id}})
+        private def \\{{name.id}}_field(\\{{(block.is_a?(Block) && block.args.size > 0) ? block.args.first.id : args}}, \\{{((block.is_a?(Block) && block.args.size > 1) ? block.args[1].id : "context").id}})
           \\{% if block.is_a?(Block) %}
-              context.with_self(\\{{(block.is_a?(Block) && block.args.size > 0) ? block.args.first.id : args.id}}) do
+              context.with_self(\\{{(block.is_a?(Block) && block.args.size > 0) ? block.args.first.id : args}}) do
                 \\{{block.body}}
               end
           \\{% else %}
